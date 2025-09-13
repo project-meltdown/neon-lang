@@ -44,7 +44,7 @@ def lex(src):
                             buf += c
                             escape = False
                         else:    
-                            tokens.append({ "type": type, "value": value, "row": row, "col": col })
+                            tokens.append({ "type": "strlit", "value": buf, "row": j, "col": i })
                             buf = ""
                             in_strlit = False
                     case _:
@@ -57,14 +57,14 @@ def lex(src):
                 buf += c
             else:
                 if len(buf) > 0:
-                    tokens.append({ "type": type, "value": value, "row": row, "col": col })
+                    tokens.append({ "type": "misc", "value": buf, "row": j, "col": i })
                     buf = ""
 
                 if c == '"':
                     in_strlit = True
                 elif c in chars:
-                    tokens.append({ "type": type, "value": value, "row": row, "col": col })
+                    tokens.append({ "type": chars[c], "value": None, "row": j, "col": i })
 
-    append(tokens,"eof",None,None,None)
+    tokens.append({ "type": "eof", "value": None, "row": None, "col": None })
 
     return tokens
