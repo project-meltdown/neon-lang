@@ -21,19 +21,6 @@ chars = {
    ';': "semi"
 }
 
-def append(tokens,type,value,row,col):
-    tokens.append({
-        "type": type,
-        "value": value,
-        "row": row,
-        "col": col
-    })
-
-def flush_buf(tokens,type,i,j):
-    global buf
-    append(tokens,type,buf,i,j)
-    buf = ""
-
 def lex(src):
     global buf
     lines = src.split("\n")
@@ -57,7 +44,8 @@ def lex(src):
                             buf += c
                             escape = False
                         else:    
-                            flush_buf(tokens,"strlit",buf_start[0],buf_start[1])
+                            tokens.append({ "type": type, "value": value, "row": row, "col": col })
+                            buf = ""
                             in_strlit = False
                     case _:
                         if buf == "":
@@ -69,12 +57,13 @@ def lex(src):
                 buf += c
             else:
                 if len(buf) > 0:
-                    flush_buf(tokens,"misc",buf_start[0],buf_start[1])
+                    tokens.append({ "type": type, "value": value, "row": row, "col": col })
+                    buf = ""
 
                 if c == '"':
                     in_strlit = True
                 elif c in chars:
-                    append(tokens,chars[c],None,i,j)
+                    tokens.append({ "type": type, "value": value, "row": row, "col": col })
 
     append(tokens,"eof",None,None,None)
 
