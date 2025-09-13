@@ -12,6 +12,8 @@ if __name__ == "__main__":
 
     lexed = lexer.lex(src)
 
+    #print(lexed)
+
     root = parser.parse(lexed)
 
     print(root)

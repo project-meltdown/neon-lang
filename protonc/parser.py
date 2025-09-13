@@ -129,78 +129,88 @@ def parse_expr_until(tokens,until):
 
     return expr
 
-def parse_statement(tokens,tree):
-    if get_keyword(peek(tokens)) or peek(tokens)["type"] == "misc" and (peek(tokens)["value"][0] == "i" or peek(tokens)["value"][0] == "u"):
-        # TODO: something that is not a declaration
-        decl = ASTNode("declaration")
-        qtype = [] # qualifiers and type
+def parse_statements_until(block,tokens,until):
+    while (next := peek(tokens)) and next["type"] not in until:
+        stmt = None
 
-        # HACK HACK HACK: this solution is very rigid and doesnt allow for custom qualifiers
-        while next := peek(tokens):
-            if next["type"] == "star":
-                qtype.append("POINTER")
-            elif next["type"] == "misc":
-                if next_kw := get_keyword(next):
-                    qtype.append(next_kw)
-                elif ((next["value"][0] == "i" or
-                      next["value"][0] == "u" ) and
-                        int(next["value"][1:]) > 2): # integer types
+        if get_keyword(peek(tokens)) or peek(tokens)["type"] == "misc" and (peek(tokens)["value"][0] == "i" or peek(tokens)["value"][0] == "u"):
+            # TODO: something that is not a declaration
+            decl = ASTNode("declaration")
+            qtype = [] # qualifiers and type
 
-                        qtype.append(next["value"].upper())
+            # HACK HACK HACK: this solution is very rigid and doesnt allow for custom qualifiers
+            while next := peek(tokens):
+                if next["type"] == "star":
+                    qtype.append("POINTER")
+                elif next["type"] == "misc":
+                    if next_kw := get_keyword(next):
+                        qtype.append(next_kw)
+                    elif ((next["value"][0] == "i" or
+                          next["value"][0] == "u" ) and
+                            int(next["value"][1:]) > 2): # integer types
+
+                            qtype.append(next["value"].upper())
+                    else:
+                        break
                 else:
                     break
-            else:
-                break
 
-            consume(tokens) #the token
-        decl.add_child("type",ASTNode("type_expr",qtype))
+                consume(tokens) #the token
+            decl.add_child("type",ASTNode("type_expr",qtype))
 
-        name = consume(tokens) #name
+            name = consume(tokens) #name
 
-        if (not name["type"] == "misc"):
-            print("Error: expected identifier as name for declaration") 
-            return False
+            if (not name["type"] == "misc"):
+                print("Error: expected identifier as name for declaration") 
+                return False
 
-        decl.add_child("name",ASTNode("ident",name["value"]))
+            decl.add_child("name",ASTNode("ident",name["value"]))
 
-        if (next := consume(tokens))["type"] == "equals":
-            expr = parse_expr_until(tokens,["semi"])
-            decl.add_child("value",expr)
+            if (next := consume(tokens))["type"] == "equals":
+                expr = parse_expr_until(tokens,["semi"])
+                decl.add_child("value",expr)
 
-        tree.add_child(len(tree.children),decl)
+            stmt = decl
 
-        if next["type"] != "semi":
+            if next["type"] != "semi":
+                consume(tokens) #semi
+
+
+        elif peek(tokens)["type"] == "misc" and peek(tokens,1)["type"] == "equals": # HACK HACK HACK: assignment operator merged with veriable identifier is rigid af
+            node = ASTNode("assignment")
+
+            name = consume(tokens)
+            node.add_child("name",ASTNode("ident",name["value"]))
+
+            consume(tokens) # equals
+
+            value = parse_expr_until(tokens,["semi"])
+            node.add_child("value",value)
+
+            stmt = node
+
             consume(tokens) #semi
+        elif peek(tokens)["type"] == "lcurly":
+            consume(tokens) #lcurly
+            node = ASTNode("block")
 
-    elif peek(tokens)["type"] == "misc" and peek(tokens,1)["type"] == "equals": # HACK HACK HACK: assignment operator merged with veriable identifier is rigid af
-        node = ASTNode("assignment")
-        
-        name = consume(tokens)
-        node.add_child("name",ASTNode("ident",name["value"]))
+            parse_statements_until(node,tokens,["rcurly"])
 
-        consume(tokens) # equals
-        
-        value = parse_expr_until(tokens,["semi"])
-        node.add_child("value",value)
+            stmt = node
 
-        tree.add_child(len(tree.children),node)
-        consume(tokens) #semi
-    elif eval_val := parse_expr_until(tokens,["semi"]):
-            eval = ASTNode("eval",None)
-            eval.add_child(0,eval_val)
-            tree.add_child(len(tree.children),eval)
-            consume(tokens)# semi
-    else:
-        return False
-    
-    return True
+            consume(tokens) #rcurly
+        elif eval_val := parse_expr_until(tokens,["semi"]):
+                eval = ASTNode("eval",None)
+                eval.add_child(0,eval_val)
+
+                consume(tokens)# semi
+
+                stmt = eval
+        block.add_child(len(block.children),stmt)
 
 def parse(tokens):
     tree = ASTNode("block")
 
-    # HACK HACK HACK: this approacht doesnt allow for sub-block
-    while True:
-        if not parse_statement(tokens,tree):
-            break
+    parse_statements_until(tree,tokens,["eof"])
 
     return tree

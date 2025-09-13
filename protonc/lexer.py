@@ -89,4 +89,6 @@ def lex(src):
                     case ';':
                         append(tokens,"semi",None,i,j)
 
+    append(tokens,"eof",None,None,None)
+
     return tokens
