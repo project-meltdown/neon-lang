@@ -142,6 +142,8 @@ def get_value(ast):
             return toret
         case "ident":
             toret = "[" + ast.value + "]"
+        case "eq_check":
+            toret = "rax"
         case _:
             toret = ast.value
     return toret
@@ -160,6 +162,8 @@ def get_type(ast):
             toret = ["LITERAL","CONST","I8","POINTER"]
         case "intlit":
             toret = ["LITERAL","CONST","I64"] # HACK HACK HACK: always 64 bit
+        case "eq_check":
+            toret = ["REGISTER", "U64"]
         case "ident":
             toret = declaration_table[ast.value]["type"]
     return toret
@@ -214,8 +218,8 @@ def emit_mov(dest,src,indentation):
 
     toret = "    "*indentation + mov_variant
 
-    src_qualifier  = "" if src_type == "reg"  or get_type(src)[0] == "LITERAL" else get_size_qualifier(src_size)  + " "
-    dest_qualifier = "" if dest_type == "reg" or get_type(dest)[0] == "LITERAL" else get_size_qualifier(dest_size) + " "
+    src_qualifier  = "" if src_type == "reg"  or get_type(src)[0] in ["LITERAL","REGISTER"] else get_size_qualifier(src_size)  + " "
+    dest_qualifier = "" if dest_type == "reg" or get_type(dest)[0] in ["LITERAL","REGISTER"] else get_size_qualifier(dest_size) + " "
 
     toret += " " + dest_qualifier + str(dest_str) + ", " + src_qualifier + str(src_str) + "\n"
 
@@ -232,7 +236,10 @@ def gen_func_call(ast,indentation):
             print("error: __ir__syscall takes 6 arguments max")
             return toret
         for i,c in enumerate(ast.children.items()):
-            toret += emit_mov(syscall_arg_regs[i],c[1],indentation)
+            if get_type(c[1])[0] == "REGISTER":
+                toret += indent + "pop " + syscall_arg_regs[i] + "\n"
+            else:
+                toret += emit_mov(syscall_arg_regs[i],c[1],indentation)
         toret += indent + "syscall\n"
     elif ast.value == "__ir_reserve":
         pass # this is not really a function but a static comptime
@@ -242,11 +249,26 @@ def gen_func_call(ast,indentation):
     return toret
 
 def gen_expr(ast,indentation):
+    indent = "    "*indentation
     toret = ""
 
     match ast.type:
         case "func_call":
+            for c in ast.children.values():
+                toret += gen_expr(c,indentation)
+                if get_type(c)[0] == "REGISTER":
+                    toret += indent + "push " + get_value(c) + "\n"
             toret += gen_func_call(ast,indentation)
+        case "eq_check":
+            toret += gen_expr(ast.children["left"],indentation)
+            toret += emit_mov("rax", ast.children["left"],indentation)
+            toret += indent + "push rax\n"
+            toret += gen_expr(ast.children["right"],indentation)
+            toret += emit_mov("rcx", ast.children["right"],indentation)
+            toret += indent + "pop rax\n"
+            toret += indent + "cmp rax, rcx\n"
+            toret += indent + "sete al\n"
+            toret += emit_mov("rax","al",indentation)
         case _:
             pass
     return toret

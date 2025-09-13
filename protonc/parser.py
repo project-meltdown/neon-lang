@@ -117,15 +117,29 @@ def parse_expr_until(tokens,until):
                             expr = ASTNode("intlit",int("-" + peek(tokens)["value"],0))
                     case _:
                         expr = ASTNode("unknown",[next])
+                if not consume(tokens): # the token
+                    return None
             case "unknown": # unknown value, pass raw tokens to AST transformations
                 expr.value.append(next)
+                if not consume(tokens): # the token
+                    return None
 
             case _: # TODO: binary operators with precedence
-                print("unexpected token:", next)
-                exit(1)
+                if next["type"] == "equals":
+                    if peek(tokens,1)["type"] == "equals":
+                        consume(tokens) # equals
+                        consume(tokens) # equals
 
-        if not consume(tokens): # the token
-            return None
+                        left = expr
+                        right = parse_expr_until(tokens, until)
+
+                        expr = ASTNode("eq_check")
+
+                        expr.add_child("left",left)
+                        expr.add_child("right",right)
+                else:
+                    print("unexpected token:", next)
+                    exit(1)
 
     return expr
 
