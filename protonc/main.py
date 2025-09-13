@@ -16,8 +16,8 @@ if __name__ == "__main__":
 
     root = parser.parse(lexed)
 
-    print(root)
+    #print(root)
 
-    #assembly = codegen.gen_assembly(root)
+    assembly = codegen.gen_assembly(root)
 
-    #print(assembly)
+    print(assembly)

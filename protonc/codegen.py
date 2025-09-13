@@ -276,6 +276,10 @@ def generate_code(ast,indentation):
                 toret += emit_mov(ast.children["name"], ast.children["value"],indentation)
         case "eval":
             toret += gen_expr(ast.children[0],indentation)
+        case "label":
+            toret += indent + ast.children["target"].value + ":\n"
+        case "goto":
+            toret += indent + "jmp " + ast.children["target"].value + "\n"
     return toret
 
 def gen_assembly(ast):

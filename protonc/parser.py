@@ -133,50 +133,64 @@ def parse_statements_until(block,tokens,until):
     while (next := peek(tokens)) and next["type"] not in until:
         stmt = None
 
-        if get_keyword(peek(tokens)) or peek(tokens)["type"] == "misc" and (peek(tokens)["value"][0] == "i" or peek(tokens)["value"][0] == "u"):
-            # TODO: something that is not a declaration
-            decl = ASTNode("declaration")
-            qtype = [] # qualifiers and type
+        if get_keyword(next) or (next["type"] == "misc" and next["value"][0] in ("i", "u")):
+            if peek(tokens)["value"] == "goto":
+                goto = ASTNode("goto")
 
-            # HACK HACK HACK: this solution is very rigid and doesnt allow for custom qualifiers
-            while next := peek(tokens):
-                if next["type"] == "star":
-                    qtype.append("POINTER")
-                elif next["type"] == "misc":
-                    if next_kw := get_keyword(next):
-                        qtype.append(next_kw)
-                    elif ((next["value"][0] == "i" or
-                          next["value"][0] == "u" ) and
-                            int(next["value"][1:]) > 2): # integer types
+                consume(tokens)# misc
 
-                            qtype.append(next["value"].upper())
+                name = consume(tokens)
+
+                if name["type"] != "misc":
+                    print("error: expected where to goto")
+                    return toret
+
+                goto.add_child("target",ASTNode("ident",name["value"]))
+
+                stmt = goto
+            else:
+                decl = ASTNode("declaration")
+                qtype = [] # qualifiers and type
+
+                # HACK HACK HACK: this solution is very rigid and doesnt allow for custom qualifiers
+                while next := peek(tokens):
+                    if next["type"] == "star":
+                        qtype.append("POINTER")
+                    elif next["type"] == "misc":
+                        if next_kw := get_keyword(next):
+                            qtype.append(next_kw)
+                        elif ((next["value"][0] == "i" or
+                              next["value"][0] == "u" ) and
+                                int(next["value"][1:]) > 2): # integer types
+
+                                qtype.append(next["value"].upper())
+                        else:
+                            break
                     else:
                         break
-                else:
-                    break
 
-                consume(tokens) #the token
-            decl.add_child("type",ASTNode("type_expr",qtype))
+                    consume(tokens) #the token
+                decl.add_child("type",ASTNode("type_expr",qtype))
 
-            name = consume(tokens) #name
+                name = consume(tokens) #name
 
-            if (not name["type"] == "misc"):
-                print("Error: expected identifier as name for declaration") 
-                return False
+                if (not name["type"] == "misc"):
+                    print("Error: expected identifier as name for declaration") 
+                    return False
 
-            decl.add_child("name",ASTNode("ident",name["value"]))
+                decl.add_child("name",ASTNode("ident",name["value"]))
 
-            if (next := consume(tokens))["type"] == "equals":
-                expr = parse_expr_until(tokens,["semi"])
-                decl.add_child("value",expr)
+                if (next := consume(tokens))["type"] == "equals":
+                    expr = parse_expr_until(tokens,["semi"])
+                    decl.add_child("value",expr)
 
-            stmt = decl
+                stmt = decl
 
             if next["type"] != "semi":
                 consume(tokens) #semi
 
 
-        elif peek(tokens)["type"] == "misc" and peek(tokens,1)["type"] == "equals": # HACK HACK HACK: assignment operator merged with veriable identifier is rigid af
+        elif next["type"] == "misc" and peek(tokens,1)["type"] == "equals": # HACK HACK HACK: assignment operator merged with veriable identifier is rigid af
             node = ASTNode("assignment")
 
             name = consume(tokens)
@@ -190,7 +204,21 @@ def parse_statements_until(block,tokens,until):
             stmt = node
 
             consume(tokens) #semi
-        elif peek(tokens)["type"] == "lcurly":
+        elif next["type"] == "misc" and peek(tokens,1)["type"] == "colon":
+            node = ASTNode("label")
+            name = consume(tokens)
+
+            if name["type"] != "misc":
+                print("error: expected where to goto")
+                return toret
+
+            node.add_child("target",ASTNode("ident",name["value"]))
+
+            stmt = node
+
+            consume(tokens) #colon
+
+        elif next["type"] == "lcurly":
             consume(tokens) #lcurly
             node = ASTNode("block")
 
