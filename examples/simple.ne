@@ -9,6 +9,6 @@ loop:
     __ir__syscall(0,0,str,size);
     __ir__syscall(1,1,str,size);
 }
-goto loop:
+goto loop;
 
 __ir__syscall(60,0);
