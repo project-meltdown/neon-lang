@@ -1,5 +1,26 @@
 buf = ""
 
+chars = {
+   '(': "lparen",
+   ')': "rparen",
+   '{': "lcurly", # OMFG Curly Brace from motherfucking cave story
+   '}': "rcurly", # bruh she turned right wing
+   '[': "lsquare",
+   ']': "rsquare",
+   '=': "equals",
+   '!': "bang",
+   '%': "percent",
+   '^': "caret",
+   '+': "plus",
+   '-': "minus",
+   '*': "star",
+   '/': "division",
+   ':': "colon",
+   '?': "question",
+   ',': "comma",
+   ';': "semi"
+}
+
 def append(tokens,type,value,row,col):
     tokens.append({
         "type": type,
@@ -49,45 +70,11 @@ def lex(src):
             else:
                 if len(buf) > 0:
                     flush_buf(tokens,"misc",buf_start[0],buf_start[1])
-                match c:
-                    case '(':
-                        append(tokens,"lparen",None,i,j)
-                    case ')':
-                        append(tokens,"rparen",None,i,j)
-                    case '{':
-                        append(tokens,"lcurly",None,i,j) # OMFG Curly Brace from motherfucking cave story
-                    case '}':
-                        append(tokens,"rcurly",None,i,j) # bruh she turned right wing
-                    case '[':
-                        append(tokens,"lsquare",None,i,j)
-                    case ']':
-                        append(tokens,"rsquare",None,i,j)
-                    case '=':
-                        append(tokens,"equals",None,i,j)
-                    case '!':
-                        append(tokens,"bang",None,i,j)
-                    case '%':
-                        append(tokens,"percent",None,i,j)
-                    case '^':
-                        append(tokens,"caret",None,i,j)
-                    case '+':
-                        append(tokens,"plus",None,i,j)
-                    case '-':
-                        append(tokens,"minus",None,i,j)
-                    case '*':
-                        append(tokens,"star",None,i,j)
-                    case '/':
-                        append(tokens,"division",None,i,j)
-                    case ':':
-                        append(tokens,"colon",None,i,j)
-                    case '?':
-                        append(tokens,"question",None,i,j)
-                    case ',':
-                        append(tokens,"comma",None,i,j)
-                    case '"':
-                        in_strlit = True
-                    case ';':
-                        append(tokens,"semi",None,i,j)
+
+                if c == '"':
+                    in_strlit = True
+                elif c in chars:
+                    append(tokens,chars[c],None,i,j)
 
     append(tokens,"eof",None,None,None)
 
