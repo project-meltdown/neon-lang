@@ -137,6 +137,9 @@ def parse_expr_until(tokens,until):
 
                         expr.add_child("left",left)
                         expr.add_child("right",right)
+                    else:
+                        print("unimplemented: assignation as an expression")
+                        exit(1)
                 else:
                     print("unexpected token:", next)
                     exit(1)
@@ -148,7 +151,7 @@ def parse_statements_until(block,tokens,until):
         stmt = None
 
         if get_keyword(next) or (next["type"] == "misc" and next["value"][0] in ("i", "u")):
-            if peek(tokens)["value"] == "goto":
+            if next["value"] == "goto":
                 goto = ASTNode("goto")
 
                 consume(tokens)# misc
@@ -162,6 +165,27 @@ def parse_statements_until(block,tokens,until):
                 goto.add_child("target",ASTNode("ident",name["value"]))
 
                 stmt = goto
+            elif next["value"] == "if":
+                ifstmt = ASTNode("if")
+                ifstmt.add_attrib("row",next["row"])
+                ifstmt.add_attrib("col",next["col"])
+
+                consume(tokens)# misc
+
+                cond = parse_expr_until(tokens,["lcurly"])
+
+                thenstmt = ASTNode("block")
+
+                consume(tokens) #lcurly
+
+                parse_statements_until(thenstmt,tokens,["rcurly"])
+
+                consume(tokens) #rcurly
+
+                ifstmt.add_child("cond",cond)
+                ifstmt.add_child("then",thenstmt)
+
+                stmt = ifstmt
             else:
                 decl = ASTNode("declaration")
                 qtype = [] # qualifiers and type

@@ -28,6 +28,9 @@ def get_strlit_name(lit):
 def get_reserve_name(lit):
     return "res_r" + str(lit.attribs["row"]) + "_c" + str(lit.attribs["col"])
 
+def get_ifstmt_name_out(lit):
+    return ".if_out_r" + str(lit.attribs["row"]) + "_c" + str(lit.attribs["col"])
+
 declaration_table = {}
 
 def resolve_constant_argument(val):
@@ -302,6 +305,13 @@ def generate_code(ast,indentation):
             toret += indent + ast.children["target"].value + ":\n"
         case "goto":
             toret += indent + "jmp " + ast.children["target"].value + "\n"
+        case "if":
+            toret += gen_expr(ast.children["cond"],indentation)
+            toret += indent + "cmp " + get_value(ast.children["cond"]) + ", 0\n"
+            toret += indent + "je " + get_ifstmt_name_out(ast) + "\n"
+            toret += generate_code(ast.children["then"],indentation+1)
+            toret += indent + get_ifstmt_name_out(ast) + ":\n"
+
     return toret
 
 def gen_assembly(ast):
